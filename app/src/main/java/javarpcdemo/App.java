@@ -3,12 +3,41 @@
  */
 package javarpcdemo;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.util.Scanner;
+
 public class App {
     public String getGreeting() {
         return "Hello World!";
     }
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        try {
+            //pass rpc command and start the process
+            ProcessBuilder builder = new ProcessBuilder("kiota", "rpc");
+            Process process = builder.start();
+            System.out.println("process started");
+            //get standard inout and output
+            Scanner stdout = new Scanner(new BufferedReader(new InputStreamReader(process.getInputStream())));
+            PrintWriter stdin = new PrintWriter(new BufferedWriter(new OutputStreamWriter(process.getOutputStream())), true);
+            String jsonRpcCommand = "{\"jsonrpc\": \"2.0\", \"method\": \"GetVersion\", \"id\": 1}";
+            stdin.println(jsonRpcCommand);
+
+            while (stdout.hasNextLine()) {
+                System.out.println("Process output: " + stdout.nextLine());
+            }
+            // Destroy the process after it's done
+            process.destroy();
+        } catch (IOException e) {
+            // Handle any exceptions that occurred during ProcessBuilder setup or process start
+            e.printStackTrace();
+        }
     }
 }
