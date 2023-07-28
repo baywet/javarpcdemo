@@ -3,12 +3,45 @@
  */
 package javarpcdemo;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import com.googlecode.jsonrpc4j.JsonRpcClient;
+
 public class App {
     public String getGreeting() {
         return "Hello World!";
     }
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        try {
+            //pass rpc command and start the process
+            ProcessBuilder builder = new ProcessBuilder("kiota", "rpc");
+            Process process = builder.start();
+            System.out.println("process started");
+            //get standard inout and output
+            OutputStream Sout = process.getOutputStream();
+            InputStream Sin = process.getInputStream();
+
+            // instantiate the jsonrpc library
+            JsonRpcClient jsonRpcClient = new JsonRpcClient();
+
+            try {
+                System.out.println("invoking getversion");
+                //invoke a request to get the getversion method from  kiota server
+                String response = jsonRpcClient.invokeAndReadResponse("GetVersion", null, String.class, Sout, Sin);
+
+                System.out.println("version is" + response);
+            } catch (Throwable throwable) {
+                // Handle any exceptions that occurred during JSON-RPC communication
+                throwable.printStackTrace();
+            }
+            // Destroy the process after it's done
+            process.destroy();
+        } catch (IOException e) {
+            // Handle any exceptions that occurred during ProcessBuilder setup or process start
+            e.printStackTrace();
+        }
     }
 }

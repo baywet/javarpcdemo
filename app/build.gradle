@@ -22,6 +22,7 @@ dependencies {
 
     // This dependency is used by the application.
     implementation 'com.google.guava:guava:31.1-jre'
+    implementation 'com.github.briandilley.jsonrpc4j:jsonrpc4j:1.6'
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
