@@ -12,6 +12,8 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 import javax.imageio.IIOException;
@@ -51,19 +53,61 @@ public class ProcessTransport implements Transport {
         stdin.write(payload.getBytes(StandardCharsets.UTF_8));
 		stdin.flush();
 		
-		String response = null;
-		while ((response = stdout.readLine()) != null) {
-			if (response.isEmpty() || response.isBlank()) {
-				continue;
-			}
-			System.out.println("Response from server: " + response);
+		final Map<String, String> headers = readResponseHeaders(stdout);
+		final int contentLength = Integer.parseInt(headers.get("Content-Length"));
+		StringBuilder responseBuilder = new StringBuilder();
+		int character;
+		for(int i = 0; i < contentLength; i++) {
+			character = stdout.read();
+			char c = (char) character;
+			responseBuilder.append(c);
+			System.out.print(c); // Print each character as it's read from the output
 		}
+		final String response = responseBuilder.toString();
+		System.out.println("Response from server: " + response);
+		stdout.close();
+    	stdin.close();
 		try {
 			process.waitFor();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		// process.destroyForcibly();
+		process.destroyForcibly();
     	return response;
     }
+	private Map<String, String> readResponseHeaders(BufferedReader stdOut) throws IOException {
+		StringBuilder headerKey = new StringBuilder();
+		StringBuilder headerValue = new StringBuilder();
+		boolean readingKey = true;
+		final HashMap<String, String> headers = new HashMap<>();
+		int character;
+		int nCount = 0;
+		while ((character = stdOut.read()) != -1) {
+			char c = (char) character;
+			if (c == '\r') {
+				continue;
+			} else if (c == '\n') {
+				if (!readingKey) {
+					readingKey = true;
+					headers.put(headerKey.toString(), headerValue.toString());
+				}
+				nCount++;
+				if (nCount == 2) {
+					break;
+				}
+			} else if (c == ':' && readingKey) {
+				readingKey = false;
+				stdOut.read(); // Consume the space after the colon
+				continue;
+			} else {
+				nCount = 0;
+			}
+			if (readingKey) {
+				headerKey.append(c);
+			} else {
+				headerValue.append(c);
+			}
+		}
+		return headers;
+	}
 }
